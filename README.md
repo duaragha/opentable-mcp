@@ -27,7 +27,7 @@ Built with [Playwright](https://playwright.dev/) for reliable data extraction fr
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (recommended) or [Node.js](https://nodejs.org/) 18+
-- A Chromium-based browser installed (Microsoft Edge, Google Chrome, or Playwright's bundled Chromium)
+- Playwright's bundled Chromium (installed automatically in the setup steps below), or a Chromium-based browser (Edge, Chrome)
 
 ### 1. Clone and build
 
@@ -103,7 +103,35 @@ Follow your client's MCP server configuration docs. The server communicates over
 }
 ```
 
-### 3. Restart your AI client
+### 3. Configure browser (optional)
+
+By default, the server uses Playwright's bundled Chromium. You can customize via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENTABLE_BROWSER_CHANNEL` | *(bundled Chromium)* | Browser to use: `msedge`, `chrome`, or omit for Chromium |
+| `OPENTABLE_LOCALE` | `en-US` | Browser locale (e.g. `en-CA`, `en-GB`, `fr-FR`) |
+| `OPENTABLE_TIMEZONE` | *(system timezone)* | IANA timezone (e.g. `America/Toronto`, `Europe/London`) |
+
+Example with Edge and Canadian locale:
+
+```json
+{
+  "mcpServers": {
+    "opentable": {
+      "command": "bun",
+      "args": ["/absolute/path/to/opentable-mcp/build/index.js"],
+      "env": {
+        "OPENTABLE_BROWSER_CHANNEL": "msedge",
+        "OPENTABLE_LOCALE": "en-CA",
+        "OPENTABLE_TIMEZONE": "America/Toronto"
+      }
+    }
+  }
+}
+```
+
+### 4. Restart your AI client
 
 After adding the config, restart your client. The OpenTable tools should now be available.
 

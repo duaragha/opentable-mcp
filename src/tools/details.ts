@@ -1,40 +1,43 @@
-import { withPage } from "../browser.js";
+import { withPage, isOpenTableUrl } from "../browser.js";
 import type { RestaurantDetails } from "../types.js";
 
 export async function getRestaurantDetails(params: {
   restaurantUrl: string;
 }): Promise<RestaurantDetails> {
+  if (!isOpenTableUrl(params.restaurantUrl)) {
+    throw new Error(`Invalid URL: must be an OpenTable restaurant URL. Got: ${params.restaurantUrl}`);
+  }
+
   return withPage(async (page) => {
     await page.goto(params.restaurantUrl, {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     });
 
-    // Wait for the main content to load
     await page
       .waitForSelector("h1", { timeout: 15000 })
       .catch(() => null);
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => null);
 
     const details = await page.evaluate(() => {
-      const getText = (selector: string): string =>
-        document.querySelector(selector)?.textContent?.trim() || "";
-
       const name =
         document.querySelector("h1")?.textContent?.trim() ||
         document.title.split("|")[0]?.trim() ||
         "";
 
-      // Rating and reviews
-      const ratingText = document.body.textContent || "";
-      const ratingMatch = ratingText.match(
-        /(\d\.\d)\s*(?:based on|from|\()\s*([\d,]+)\s*(?:reviews?|ratings?)/i
-      );
-      const rating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
-      const reviewCount = ratingMatch
-        ? parseInt(ratingMatch[2].replace(",", ""))
-        : 0;
+      // Rating and reviews — look near the rating element, not full body
+      let rating = 0;
+      let reviewCount = 0;
+      const ratingEl = document.querySelector('[class*="rating"], [class*="Rating"], [class*="star"]');
+      if (ratingEl) {
+        const ratingContainer = ratingEl.closest('[class*="header"], [class*="Header"], [class*="overview"]') || ratingEl.parentElement;
+        const containerText = ratingContainer?.textContent || "";
+        const ratingMatch = containerText.match(/(\d\.\d)/);
+        if (ratingMatch) rating = parseFloat(ratingMatch[1]);
+        const countMatch = containerText.match(/\(?([\d,]+)\)?\s*(?:reviews?|ratings?)/i);
+        if (countMatch) reviewCount = parseInt(countMatch[1].replace(",", ""));
+      }
 
       // Description
       const descEl = document.querySelector(
@@ -48,7 +51,7 @@ export async function getRestaurantDetails(params: {
       );
       const address = addressEl?.textContent?.trim() || "";
 
-      // Tags (neighborhood gem, lively, etc.)
+      // Tags
       const tagEls = document.querySelectorAll(
         '[class*="tag"], [class*="Tag"], [class*="badge"], [class*="Badge"]'
       );
@@ -59,26 +62,20 @@ export async function getRestaurantDetails(params: {
       }
 
       // Price range
-      const priceEl = document.querySelector(
-        '[class*="price"], [class*="Price"]'
-      );
+      const priceEl = document.querySelector('[class*="price"], [class*="Price"]');
       const priceRange =
         priceEl?.textContent?.trim() ||
         (document.body.textContent?.match(/(\${2,4}|CAN\$[\d]+ and (?:under|over))/)?.[1] ?? "");
 
       // Cuisine
-      const cuisineEl = document.querySelector(
-        '[class*="cuisine"], [class*="Cuisine"]'
-      );
+      const cuisineEl = document.querySelector('[class*="cuisine"], [class*="Cuisine"]');
       const cuisine = cuisineEl?.textContent?.trim() || "";
 
       // Neighborhood
-      const neighborhoodEl = document.querySelector(
-        '[class*="neighborhood"], [class*="Neighborhood"]'
-      );
+      const neighborhoodEl = document.querySelector('[class*="neighborhood"], [class*="Neighborhood"]');
       const neighborhood = neighborhoodEl?.textContent?.trim() || "";
 
-      // Restaurant info section (dining style, dress code, parking, etc.)
+      // Restaurant info section
       const infoItems = document.querySelectorAll(
         '[class*="InfoItem"], [class*="info-item"], [class*="detail-item"], [class*="DetailItem"]'
       );
@@ -100,7 +97,7 @@ export async function getRestaurantDetails(params: {
         if (text.includes("phone")) phone = value.replace(/phone/i, "").trim();
       }
 
-      // Hours — try to extract from the page
+      // Hours
       const hours: Record<string, string> = {};
       const hoursSection = document.querySelector(
         '[class*="Hours"], [class*="hours"], [class*="schedule"]'

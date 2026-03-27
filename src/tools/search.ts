@@ -11,7 +11,7 @@ export async function searchRestaurants(params: {
   return withPage(async (page) => {
     const { query, location, date, time, partySize } = params;
 
-    const searchUrl = new URL("https://www.opentable.ca/s");
+    const searchUrl = new URL("https://www.opentable.com/s");
     const searchTerm = query ? `${query} ${location}` : location;
     searchUrl.searchParams.set("term", searchTerm);
     if (date) searchUrl.searchParams.set("dateTime", `${date}T${time || "19:00"}`);
@@ -19,13 +19,13 @@ export async function searchRestaurants(params: {
 
     await page.goto(searchUrl.toString(), { waitUntil: "domcontentloaded", timeout: 30000 });
 
-    // Wait for search results to appear
+    // Wait for search results to render
     await page.waitForSelector('[data-test="search-result-item"], [class*="RestaurantSearchResult"], [class*="restaurant-card"]', {
       timeout: 15000,
     }).catch(() => null);
 
-    // Give dynamic content a moment to hydrate
-    await page.waitForTimeout(2000);
+    // Wait for network to settle instead of arbitrary sleep
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => null);
 
     const restaurants = await page.evaluate(() => {
       const results: Array<{
@@ -40,15 +40,15 @@ export async function searchRestaurants(params: {
         imageUrl?: string;
       }> = [];
 
-      // OpenTable search results - try multiple selector strategies
+      // Target search result cards specifically, not all links
       const cards = document.querySelectorAll(
-        '[data-test="search-result-item"], [class*="RestaurantSearchResult"], a[href*="/r/"]'
+        '[data-test="search-result-item"], [class*="RestaurantSearchResult"], [class*="restaurant-card"]'
       );
 
       const seen = new Set<string>();
 
       for (const card of cards) {
-        const anchor = card.tagName === "A" ? card as HTMLAnchorElement : card.querySelector('a[href*="/r/"]') as HTMLAnchorElement | null;
+        const anchor = card.querySelector('a[href*="/r/"]') as HTMLAnchorElement | null;
         if (!anchor?.href || seen.has(anchor.href)) continue;
         seen.add(anchor.href);
 

@@ -1,30 +1,31 @@
-import { withPage } from "../browser.js";
+import { withPage, isOpenTableUrl } from "../browser.js";
 import type { MenuSection } from "../types.js";
 
 export async function getRestaurantMenu(params: {
   restaurantUrl: string;
 }): Promise<MenuSection[]> {
+  if (!isOpenTableUrl(params.restaurantUrl)) {
+    throw new Error(`Invalid URL: must be an OpenTable restaurant URL. Got: ${params.restaurantUrl}`);
+  }
+
   return withPage(async (page) => {
-    // Navigate to the restaurant page
     await page.goto(params.restaurantUrl, {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     });
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => null);
 
     // Click on the Menu tab if it exists
-    const menuTab = await page
-      .locator('a[href*="menu"], button:has-text("Menu"), [data-test*="menu"]')
-      .first()
-      .click({ timeout: 5000 })
-      .catch(() => null);
+    const menuTab = page.locator('a[href*="menu"], button:has-text("Menu"), [data-test*="menu"]').first();
+    const tabVisible = await menuTab.isVisible({ timeout: 5000 }).catch(() => false);
 
-    if (menuTab !== null) {
-      await page.waitForTimeout(2000);
+    if (tabVisible) {
+      await menuTab.click();
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => null);
     }
 
-    // Wait for menu content to appear
+    // Wait for menu content
     await page
       .waitForSelector(
         '[class*="menu"], [class*="Menu"], [data-test*="menu"]',
@@ -82,46 +83,38 @@ export async function getRestaurantMenu(params: {
         }
       }
 
-      // Strategy 2: Fallback — scrape any text that looks like menu content
+      // Strategy 2: Fallback — scrape elements with price patterns
       if (results.length === 0) {
         const menuContainer = document.querySelector(
           '[class*="menu"], [class*="Menu"], [id*="menu"]'
         );
 
         if (menuContainer) {
-          const allText = menuContainer.innerHTML;
-          // Find price patterns to identify menu items
-          const pricePattern = /\$[\d,.]+/g;
-          const hasMenuPrices = pricePattern.test(allText);
+          const items: Array<{
+            name: string;
+            description: string;
+            price: string;
+          }> = [];
 
-          if (hasMenuPrices) {
-            const items: Array<{
-              name: string;
-              description: string;
-              price: string;
-            }> = [];
-
-            // Look for any elements with prices nearby
-            const allEls = menuContainer.querySelectorAll("*");
-            for (const el of allEls) {
-              const text = el.textContent?.trim() || "";
-              const priceMatch = text.match(/\$[\d,.]+/);
-              if (
-                priceMatch &&
-                el.children.length < 5 &&
-                text.length < 300
-              ) {
-                const price = priceMatch[0];
-                const name = text.replace(price, "").trim().split("\n")[0] || "";
-                if (name && name.length > 2 && name.length < 100) {
-                  items.push({ name, description: "", price });
-                }
+          const allEls = menuContainer.querySelectorAll("*");
+          for (const el of allEls) {
+            const text = el.textContent?.trim() || "";
+            const priceMatch = text.match(/\$[\d,.]+/);
+            if (
+              priceMatch &&
+              el.children.length < 5 &&
+              text.length < 300
+            ) {
+              const price = priceMatch[0];
+              const name = text.replace(price, "").trim().split("\n")[0] || "";
+              if (name && name.length > 2 && name.length < 100) {
+                items.push({ name, description: "", price });
               }
             }
+          }
 
-            if (items.length > 0) {
-              results.push({ section: "Menu", items });
-            }
+          if (items.length > 0) {
+            results.push({ section: "Menu", items });
           }
         }
       }
