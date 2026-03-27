@@ -95,5 +95,5 @@ export async function searchRestaurants(params: {
     });
 
     return restaurants;
-  });
+  }, "https://www.opentable.com");
 }

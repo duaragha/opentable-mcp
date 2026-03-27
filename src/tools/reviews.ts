@@ -144,5 +144,5 @@ export async function getRestaurantReviews(params: {
     );
 
     return { ...result, url: restaurantUrl };
-  });
+  }, params.restaurantUrl);
 }

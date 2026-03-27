@@ -123,5 +123,5 @@ export async function getRestaurantMenu(params: {
     });
 
     return sections;
-  });
+  }, params.restaurantUrl);
 }

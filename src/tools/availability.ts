@@ -183,5 +183,5 @@ export async function checkAvailability(params: {
       timeSlots: uniqueSlots,
       message: statusMessage || undefined,
     };
-  });
+  }, restaurantUrl);
 }

@@ -138,5 +138,5 @@ export async function getRestaurantDetails(params: {
     });
 
     return { ...details, url: params.restaurantUrl };
-  });
+  }, params.restaurantUrl);
 }
