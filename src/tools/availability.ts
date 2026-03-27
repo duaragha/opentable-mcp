@@ -168,8 +168,15 @@ export async function checkAvailability(params: {
       return true;
     });
 
+    // Build a direct booking URL with params pre-filled
+    const bookingUrl = new URL(restaurantUrl);
+    bookingUrl.searchParams.set("dateTime", `${date}T${time}`);
+    bookingUrl.searchParams.set("covers", partySize.toString());
+
     return {
       restaurantName,
+      url: restaurantUrl,
+      bookingUrl: bookingUrl.toString(),
       date,
       requestedTime: time,
       partySize,

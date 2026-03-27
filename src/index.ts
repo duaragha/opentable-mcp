@@ -194,7 +194,7 @@ server.registerTool(
           content: [
             {
               type: "text" as const,
-              text: "No menu data found on the OpenTable page. The restaurant may not have uploaded their menu, or it may be in a non-standard format.",
+              text: JSON.stringify({ url: params.restaurantUrl, message: "No menu data found on the OpenTable page. The restaurant may not have uploaded their menu, or it may be in a non-standard format.", sections: [] }, null, 2),
             },
           ],
         };
@@ -203,7 +203,7 @@ server.registerTool(
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(result, null, 2),
+            text: JSON.stringify({ url: params.restaurantUrl, sections: result }, null, 2),
           },
         ],
       };

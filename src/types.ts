@@ -17,6 +17,8 @@ export interface TimeSlot {
 
 export interface Availability {
   restaurantName: string;
+  url: string;
+  bookingUrl: string;
   date: string;
   requestedTime: string;
   partySize: number;
@@ -26,6 +28,7 @@ export interface Availability {
 
 export interface RestaurantDetails {
   name: string;
+  url: string;
   address: string;
   neighborhood: string;
   cuisine: string;
@@ -67,6 +70,7 @@ export interface Review {
 }
 
 export interface ReviewSummary {
+  url: string;
   overall: number;
   food: number;
   service: number;

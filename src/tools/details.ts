@@ -137,6 +137,6 @@ export async function getRestaurantDetails(params: {
       };
     });
 
-    return details;
+    return { ...details, url: params.restaurantUrl };
   });
 }

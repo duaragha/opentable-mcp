@@ -143,6 +143,6 @@ export async function getRestaurantReviews(params: {
       maxReviews
     );
 
-    return result;
+    return { ...result, url: restaurantUrl };
   });
 }
