@@ -1,4 +1,4 @@
-import { withPage, isOpenTableUrl } from "../browser.js";
+import { withPage, gotoOpenTable, isOpenTableUrl } from "../browser.js";
 import type { Availability, TimeSlot } from "../types.js";
 
 /** Normalize time strings like "3:00 p.m.", "15:00", "3:00 PM" to "3:00 PM" format */
@@ -77,10 +77,7 @@ export async function checkAvailability(params: {
       }
     });
 
-    await page.goto(url.toString(), {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
+    await gotoOpenTable(page, url.toString());
 
     // Wait for time slots or a "no availability" indicator
     await page
@@ -183,5 +180,5 @@ export async function checkAvailability(params: {
       timeSlots: uniqueSlots,
       message: statusMessage || undefined,
     };
-  }, restaurantUrl);
+  });
 }

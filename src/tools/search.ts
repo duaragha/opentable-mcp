@@ -1,4 +1,4 @@
-import { withPage } from "../browser.js";
+import { withPage, gotoOpenTable } from "../browser.js";
 import type { Restaurant } from "../types.js";
 
 export async function searchRestaurants(params: {
@@ -17,7 +17,7 @@ export async function searchRestaurants(params: {
     if (date) searchUrl.searchParams.set("dateTime", `${date}T${time || "19:00"}`);
     if (partySize) searchUrl.searchParams.set("covers", partySize.toString());
 
-    await page.goto(searchUrl.toString(), { waitUntil: "domcontentloaded", timeout: 30000 });
+    await gotoOpenTable(page, searchUrl.toString());
 
     // Wait for search results to render
     await page.waitForSelector('[data-test="search-result-item"], [class*="RestaurantSearchResult"], [class*="restaurant-card"]', {
@@ -95,5 +95,5 @@ export async function searchRestaurants(params: {
     });
 
     return restaurants;
-  }, "https://www.opentable.com");
+  });
 }

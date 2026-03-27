@@ -1,4 +1,4 @@
-import { withPage, isOpenTableUrl } from "../browser.js";
+import { withPage, gotoOpenTable, isOpenTableUrl } from "../browser.js";
 import type { ReviewSummary } from "../types.js";
 
 export async function getRestaurantReviews(params: {
@@ -13,10 +13,7 @@ export async function getRestaurantReviews(params: {
   return withPage(async (page) => {
     const { restaurantUrl, maxReviews = 10, sortBy = "newest" } = params;
 
-    await page.goto(restaurantUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
+    await gotoOpenTable(page, restaurantUrl);
 
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => null);
 
@@ -144,5 +141,5 @@ export async function getRestaurantReviews(params: {
     );
 
     return { ...result, url: restaurantUrl };
-  }, params.restaurantUrl);
+  });
 }

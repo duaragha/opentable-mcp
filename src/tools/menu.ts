@@ -1,4 +1,4 @@
-import { withPage, isOpenTableUrl } from "../browser.js";
+import { withPage, gotoOpenTable, isOpenTableUrl } from "../browser.js";
 import type { MenuSection } from "../types.js";
 
 export async function getRestaurantMenu(params: {
@@ -9,10 +9,7 @@ export async function getRestaurantMenu(params: {
   }
 
   return withPage(async (page) => {
-    await page.goto(params.restaurantUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
+    await gotoOpenTable(page, params.restaurantUrl);
 
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => null);
 
@@ -123,5 +120,5 @@ export async function getRestaurantMenu(params: {
     });
 
     return sections;
-  }, params.restaurantUrl);
+  });
 }

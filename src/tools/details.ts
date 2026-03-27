@@ -1,4 +1,4 @@
-import { withPage, isOpenTableUrl } from "../browser.js";
+import { withPage, gotoOpenTable, isOpenTableUrl } from "../browser.js";
 import type { RestaurantDetails } from "../types.js";
 
 export async function getRestaurantDetails(params: {
@@ -9,10 +9,7 @@ export async function getRestaurantDetails(params: {
   }
 
   return withPage(async (page) => {
-    await page.goto(params.restaurantUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
+    await gotoOpenTable(page, params.restaurantUrl);
 
     await page
       .waitForSelector("h1", { timeout: 15000 })
@@ -138,5 +135,5 @@ export async function getRestaurantDetails(params: {
     });
 
     return { ...details, url: params.restaurantUrl };
-  }, params.restaurantUrl);
+  });
 }

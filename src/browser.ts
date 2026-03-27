@@ -2,34 +2,11 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
-const warmedDomains = new Set<string>();
 
 const DEFAULT_TIMEOUT = 60_000;
 
 function getBrowserChannel(): string | undefined {
   return process.env.OPENTABLE_BROWSER_CHANNEL || undefined;
-}
-
-async function warmDomain(ctx: BrowserContext, url: string): Promise<void> {
-  let hostname: string;
-  try {
-    hostname = new URL(url).hostname;
-  } catch {
-    return;
-  }
-  if (warmedDomains.has(hostname)) return;
-
-  // OpenTable blocks direct navigation to /r/ pages from automated browsers.
-  // Visiting the homepage first sets the required anti-bot cookies.
-  const page = await ctx.newPage();
-  try {
-    await page.goto(`https://${hostname}`, { waitUntil: "domcontentloaded", timeout: 15000 });
-  } catch {
-    // Non-fatal — some tool calls may still work without warmup
-  } finally {
-    await page.close();
-  }
-  warmedDomains.add(hostname);
 }
 
 async function ensureContext(): Promise<BrowserContext> {
@@ -44,7 +21,6 @@ async function ensureContext(): Promise<BrowserContext> {
       locale: process.env.OPENTABLE_LOCALE || "en-US",
       timezoneId: process.env.OPENTABLE_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
-    warmedDomains.clear();
   }
   return context!;
 }
@@ -59,15 +35,29 @@ export async function closeBrowser(): Promise<void> {
     await browser.close();
     browser = null;
     context = null;
-    warmedDomains.clear();
   }
 }
 
-export async function withPage<T>(fn: (page: Page) => Promise<T>, targetUrl?: string): Promise<T> {
+/**
+ * Navigate to an OpenTable URL with anti-bot warmup.
+ * OpenTable blocks direct navigation to /r/ pages — the page must visit
+ * the homepage first on the SAME page (not a separate tab) so the
+ * navigation chain and referer are set correctly.
+ */
+export async function gotoOpenTable(page: Page, url: string, options?: { waitUntil?: "domcontentloaded" | "load" | "networkidle"; timeout?: number }): Promise<void> {
+  const hostname = new URL(url).hostname;
+  const waitUntil = options?.waitUntil || "domcontentloaded";
+  const timeout = options?.timeout || 30000;
+
+  // Visit homepage first on this page to establish navigation chain
+  await page.goto(`https://${hostname}`, { waitUntil: "domcontentloaded", timeout: 15000 });
+
+  // Now navigate to the actual target
+  await page.goto(url, { waitUntil, timeout });
+}
+
+export async function withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
   const ctx = await ensureContext();
-  if (targetUrl) {
-    await warmDomain(ctx, targetUrl);
-  }
   const page = await ctx.newPage();
   try {
     const result = await Promise.race([
