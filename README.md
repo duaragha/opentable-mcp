@@ -103,9 +103,9 @@ Follow your client's MCP server configuration docs. The server communicates over
 }
 ```
 
-### 3. Configure browser (optional)
+### 3. Configure browser (recommended)
 
-By default, the server uses Playwright's bundled Chromium. You can customize via environment variables:
+**Important:** OpenTable's anti-bot protection may block Playwright's bundled Chromium. Using a locally installed browser (Edge or Chrome) is recommended for reliable results. Configure via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -113,7 +113,7 @@ By default, the server uses Playwright's bundled Chromium. You can customize via
 | `OPENTABLE_LOCALE` | `en-US` | Browser locale (e.g. `en-CA`, `en-GB`, `fr-FR`) |
 | `OPENTABLE_TIMEZONE` | *(system timezone)* | IANA timezone (e.g. `America/Toronto`, `Europe/London`) |
 
-Example with Edge and Canadian locale:
+Example with Edge (recommended):
 
 ```json
 {
