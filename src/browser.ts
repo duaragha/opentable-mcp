@@ -1,4 +1,8 @@
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
+import { chromium } from "playwright-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+
+chromium.use(StealthPlugin());
 
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
@@ -11,12 +15,16 @@ function getBrowserChannel(): string | undefined {
 
 async function ensureContext(): Promise<BrowserContext> {
   if (!browser || !browser.isConnected()) {
-    browser = await chromium.launch({
+    // Use playwright-extra with stealth plugin to patch automation telltales
+    // (navigator.webdriver, chrome runtime, permissions, plugin array, etc.)
+    browser = (await chromium.launch({
       headless: true,
       channel: getBrowserChannel(),
-    });
+    })) as Browser;
+
+    // No manual userAgent override — let the launched browser (Edge/Chrome)
+    // set its own native UA so it matches the real binary's version.
     context = await browser.newContext({
-      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
       viewport: { width: 1280, height: 800 },
       locale: process.env.OPENTABLE_LOCALE || "en-US",
       timezoneId: process.env.OPENTABLE_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -49,10 +57,7 @@ export async function gotoOpenTable(page: Page, url: string, options?: { waitUnt
   const waitUntil = options?.waitUntil || "domcontentloaded";
   const timeout = options?.timeout || 30000;
 
-  // Visit homepage first on this page to establish navigation chain
   await page.goto(`https://${hostname}`, { waitUntil: "domcontentloaded", timeout: 15000 });
-
-  // Now navigate to the actual target
   await page.goto(url, { waitUntil, timeout });
 }
 
